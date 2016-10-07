@@ -1,4 +1,4 @@
-package com.bartovapps.imployeescanner;
+package com.bartovapps.employeescanner;
 
 import org.junit.Test;
 

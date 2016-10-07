@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'realm-android'
 
 android {
     compileSdkVersion 24
@@ -20,8 +21,14 @@ android {
 }
 
 dependencies {
-    compile files('libs/zbar.jar')
+//    compile files('libs/zbar.jar')
+    compile 'me.dm7.barcodescanner:zbar:1.9'
     compile fileTree(dir: 'libs', include: ['*.jar'])
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:24.2.0'
+    compile 'com.android.support:design:24.2.0'
+    compile 'com.google.code.gson:gson:2.7'
+    compile files('libs/org.json.jar')
+    compile 'commons-io:commons-io:2.4'
+    compile 'com.crittercism:crittercism-android-agent:+'
 }

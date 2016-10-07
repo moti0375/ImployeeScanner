@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">ImployeeScanner</string>
+    <string name="app_name">EmployeeScanner</string>
+    <string name="scanning">Scanning...</string>
 </resources>

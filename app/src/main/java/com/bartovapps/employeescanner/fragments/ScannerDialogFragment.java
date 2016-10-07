@@ -1,4 +1,4 @@
-package com.bartovapps.imployeescanner.fragments;
+package com.bartovapps.employeescanner.fragments;
 
 import android.content.pm.ActivityInfo;
 import android.hardware.Camera;
@@ -15,15 +15,20 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import com.bartovapps.imployeescanner.CameraPreview;
-import com.bartovapps.imployeescanner.R;
+import com.bartovapps.employeescanner.CameraPreview;
+import com.bartovapps.employeescanner.R;
+import com.bartovapps.employeescanner.model.Employee;
+import com.bartovapps.employeescanner.model.EmployeesDataSource;
 
 import net.sourceforge.zbar.Config;
 import net.sourceforge.zbar.Image;
 import net.sourceforge.zbar.ImageScanner;
 import net.sourceforge.zbar.Symbol;
 import net.sourceforge.zbar.SymbolSet;
+
+import io.realm.Realm;
 
 /**
  * Created by BartovMoti on 10/01/16.
@@ -44,6 +49,8 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
 
     private boolean barcodeScanned = false;
     private boolean previewing = true;
+    ScannerEventListener mEventListener;
+    Realm mRealm;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -51,15 +58,18 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
         getActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         autoFocusHandler = new Handler();
         mCamera = getCameraInstance();
-        if(mCamera != null){
-            Log.i(TAG, "got camera instance" );
-        }else{
+
+        if (mCamera == null) {
             Log.i(TAG, "onCreate: Camera = null!!");
+            Toast.makeText(getActivity(), "Unable to open rear camera!", Toast.LENGTH_LONG).show();
+            dismiss();
         }
 
         scanner = new ImageScanner();
         scanner.setConfig(0, Config.X_DENSITY, 3);
         scanner.setConfig(0, Config.Y_DENSITY, 3);
+        scanner.setConfig(Symbol.QRCODE, Config.ENABLE, 1);
+
 
     }
 
@@ -73,6 +83,7 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
         btTryAgain = (ImageButton) view.findViewById(R.id.btCancel);
         btTryAgain.setOnClickListener(this);
 
+
         mPreview = new CameraPreview(getActivity().getBaseContext(), mCamera, previewCb, autoFocusCB);
         mPreview.setBackgroundResource(R.drawable.scan_dialog_background);
         FrameLayout preview = (FrameLayout) view.findViewById(R.id.flPreview);
@@ -80,13 +91,19 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
         return view;
     }
 
+    public void setScanEventListener(ScannerEventListener eventListener) {
+        mEventListener = eventListener;
+    }
+
 
     @Override
     public void onClick(View view) {
 
-        if(view == btTryAgain){
+        if (view == btTryAgain) {
             btTryAgain.setVisibility(View.INVISIBLE);
             btOk.setVisibility(View.INVISIBLE);
+            tvScanText.setText(null);
+
             if (barcodeScanned) {
                 barcodeScanned = false;
                 mCamera.setPreviewCallback(previewCb);
@@ -96,7 +113,32 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
             }
         }
         if (view == btOk) {
+            addEmployeeToRealm();
             dismiss();
+        }
+    }
+
+    private void addEmployeeToRealm() {
+        Log.i(TAG, "About to add employee to realm db...");
+        final String tagId = tvScanText.getText().toString();
+
+        Employee employee = new Employee();
+        employee.setTag_id(tagId);
+        employee.setArrived(true);
+
+        EmployeesDataSource dataSource = new EmployeesDataSource(getActivity());
+        dataSource.open();
+        employee = dataSource.insert(employee);
+        dataSource.close();
+
+        if(employee != null){
+            if(mEventListener != null){
+                mEventListener.onScanComplete(employee.getTag_id());
+            }
+        }else{
+            if(mEventListener != null){
+                mEventListener.onScanFailed("Failed to add to database");
+            }
         }
     }
 
@@ -104,7 +146,6 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
     private Runnable doAutoFocus = new Runnable() {
         public void run() {
             if (previewing) {
-                tvScanText.setText("Scanning...");
                 mCamera.autoFocus(autoFocusCB);
             }
         }
@@ -127,11 +168,11 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
         public void onAutoFocus(boolean success, Camera camera) {
             autoFocusHandler.postDelayed(doAutoFocus, 1000);
 
-            if(scanner == null){
+            if (scanner == null) {
                 Log.i(TAG, "onAutoFocus: Scanner is null");
             }
 
-            if (barcode == null){
+            if (barcode == null) {
                 Log.i(TAG, "onAutoFocus: barcode is null");
             }
 
@@ -150,7 +191,7 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
                     tvScanText.setText(sym.getData());
                     barcodeScanned = true;
                 }
-        }
+            }
         }
     };
 
@@ -160,7 +201,7 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
     public static Camera getCameraInstance() {
         Camera c = null;
         try {
-            c = Camera.open();
+            c = Camera.open(Camera.CameraInfo.CAMERA_FACING_BACK);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -182,8 +223,15 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
         }
     }
 
-    private void playBeep(){
+    private void playBeep() {
         final ToneGenerator tg = new ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100);
         tg.startTone(ToneGenerator.TONE_PROP_BEEP2, 100);
     }
+
+    public interface ScannerEventListener {
+        void onScanComplete(String scanStr);
+        void onScanFailed(String message);
+    }
+
+
 }
