@@ -1,12 +1,14 @@
 package com.bartovapps.employeescanner.utils;
 
 import android.content.Context;
+import android.database.Cursor;
 import android.os.Environment;
 import android.util.Log;
 
 import com.bartovapps.employeescanner.R;
 import com.bartovapps.employeescanner.model.Employee;
 import com.bartovapps.employeescanner.model.EmployeeSerializer;
+import com.bartovapps.employeescanner.model.EmployeesDbOpenHelper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
@@ -104,6 +106,31 @@ public class EmployeeScannerUtils {
         String dateString = formatter.format(new Date(now));
 
         return context.getString(R.string.app_name) + "_" + dateString + ".csv";
+
+    }
+
+    public static ArrayList<Employee> getEmployeesFromCursor(Cursor cursor){
+        ArrayList<Employee> employees = new ArrayList<>();
+
+        if (cursor.getCount() > 0) {
+
+            cursor.moveToFirst();
+            while (cursor.moveToNext()) {
+                Employee employee = new Employee();
+                employee.setId(cursor.getLong(cursor.getColumnIndex(EmployeesDbOpenHelper.COLUMN_ID)));
+                employee.setTag_id(cursor.getString(cursor.getColumnIndex(EmployeesDbOpenHelper.COLUMN_TAG_ID)));
+                employee.setName(cursor.getString(cursor.getColumnIndex(EmployeesDbOpenHelper.COLUMN_NAME)));
+                employee.setArrived(cursor.getInt(cursor.getColumnIndex(EmployeesDbOpenHelper.COLUMN_ARRIVED)) > 0);
+                employee.setImageUri(cursor.getString(cursor.getColumnIndex(EmployeesDbOpenHelper.COLUMN_IMAGE_URI)));
+                employees.add(employee);
+
+                Log.i(TAG, "employee added: " + employee.toString());
+            }
+        }else{
+            return null;
+        }
+
+        return employees;
 
     }
 

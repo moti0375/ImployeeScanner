@@ -1,9 +1,11 @@
 package com.bartovapps.employeescanner.fragments;
 
+import android.content.ContentValues;
 import android.content.pm.ActivityInfo;
 import android.hardware.Camera;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.Nullable;
@@ -20,15 +22,14 @@ import android.widget.Toast;
 import com.bartovapps.employeescanner.CameraPreview;
 import com.bartovapps.employeescanner.R;
 import com.bartovapps.employeescanner.model.Employee;
-import com.bartovapps.employeescanner.model.EmployeesDataSource;
+import com.bartovapps.employeescanner.model.EmployeesDbOpenHelper;
+import com.bartovapps.employeescanner.model.EmployeesProvider;
 
 import net.sourceforge.zbar.Config;
 import net.sourceforge.zbar.Image;
 import net.sourceforge.zbar.ImageScanner;
 import net.sourceforge.zbar.Symbol;
 import net.sourceforge.zbar.SymbolSet;
-
-import io.realm.Realm;
 
 /**
  * Created by BartovMoti on 10/01/16.
@@ -44,26 +45,20 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
     private CameraPreview mPreview;
     private Handler autoFocusHandler;
     private Image barcode;
+    FrameLayout mPreviewLayout;
 
     ImageScanner scanner;
 
     private boolean barcodeScanned = false;
     private boolean previewing = true;
     ScannerEventListener mEventListener;
-    Realm mRealm;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         autoFocusHandler = new Handler();
-        mCamera = getCameraInstance();
 
-        if (mCamera == null) {
-            Log.i(TAG, "onCreate: Camera = null!!");
-            Toast.makeText(getActivity(), "Unable to open rear camera!", Toast.LENGTH_LONG).show();
-            dismiss();
-        }
 
         scanner = new ImageScanner();
         scanner.setConfig(0, Config.X_DENSITY, 3);
@@ -82,13 +77,23 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
         btOk.setOnClickListener(this);
         btTryAgain = (ImageButton) view.findViewById(R.id.btCancel);
         btTryAgain.setOnClickListener(this);
+        mPreviewLayout = (FrameLayout) view.findViewById(R.id.flPreview);
+        return view;
+    }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        mCamera = getCameraInstance();
+        if (mCamera == null) {
+            Log.i(TAG, "onCreate: Camera = null!!");
+            Toast.makeText(getActivity(), "Unable to open rear camera!", Toast.LENGTH_LONG).show();
+            dismiss();
+        }
 
         mPreview = new CameraPreview(getActivity().getBaseContext(), mCamera, previewCb, autoFocusCB);
         mPreview.setBackgroundResource(R.drawable.scan_dialog_background);
-        FrameLayout preview = (FrameLayout) view.findViewById(R.id.flPreview);
-        preview.addView(mPreview);
-        return view;
+        mPreviewLayout.addView(mPreview);
     }
 
     public void setScanEventListener(ScannerEventListener eventListener) {
@@ -113,29 +118,38 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
             }
         }
         if (view == btOk) {
-            addEmployeeToRealm();
+            addEmployeeToDb();
             dismiss();
         }
     }
 
-    private void addEmployeeToRealm() {
-        Log.i(TAG, "About to add employee to realm db...");
+
+    private void addEmployeeToDb() {
+        Log.i(TAG, "About to add employee to db via Content Provider...");
         final String tagId = tvScanText.getText().toString();
 
         Employee employee = new Employee();
         employee.setTag_id(tagId);
         employee.setArrived(true);
 
-        EmployeesDataSource dataSource = new EmployeesDataSource(getActivity());
-        dataSource.open();
-        employee = dataSource.insert(employee);
-        dataSource.close();
+//        EmployeesDataSource dataSource = new EmployeesDataSource(getActivity());
+//        dataSource.open();
+//        employee = dataSource.insert(employee);
+//        dataSource.close();
 
-        if(employee != null){
+        ContentValues values = new ContentValues();
+        values.put(EmployeesDbOpenHelper.COLUMN_TAG_ID, tagId);
+        values.put(EmployeesDbOpenHelper.COLUMN_ARRIVED, employee.isArrived() ? 1 : 0);
+
+        Uri uri = getActivity().getContentResolver().insert(EmployeesProvider.CONTENT_URI, values);
+
+        if(uri != null){
+            Log.i(TAG, "inserted via content provider");
             if(mEventListener != null){
                 mEventListener.onScanComplete(employee.getTag_id());
             }
         }else{
+            Log.i(TAG, "Failed to insert to db via content provider ");
             if(mEventListener != null){
                 mEventListener.onScanFailed("Failed to add to database");
             }
@@ -210,8 +224,9 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
 
     @Override
     public void onPause() {
-        releaseCamera();
         super.onPause();
+        releaseCamera();
+        dismiss();
     }
 
     private void releaseCamera() {

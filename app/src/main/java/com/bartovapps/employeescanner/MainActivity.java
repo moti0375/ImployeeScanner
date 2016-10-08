@@ -4,13 +4,17 @@ import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -24,9 +28,11 @@ import android.widget.Toast;
 import com.bartovapps.employeescanner.adapters.Divider;
 import com.bartovapps.employeescanner.adapters.EmployeesRecyclerAdapter;
 import com.bartovapps.employeescanner.adapters.SimpleTouchCallback;
+import com.bartovapps.employeescanner.adapters.SwipeListener;
 import com.bartovapps.employeescanner.fragments.ScannerDialogFragment;
 import com.bartovapps.employeescanner.model.Employee;
-import com.bartovapps.employeescanner.model.EmployeesDataSource;
+import com.bartovapps.employeescanner.model.EmployeesDbOpenHelper;
+import com.bartovapps.employeescanner.model.EmployeesProvider;
 import com.bartovapps.employeescanner.utils.EmployeeScannerUtils;
 import com.crittercism.app.Crittercism;
 
@@ -36,10 +42,9 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.realm.Realm;
 import io.realm.RealmChangeListener;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, LoaderManager.LoaderCallbacks<Cursor>, SwipeListener {
     public static final String DIALOG_TAG = "DIALOG";
     private static final String TAG = MainActivity.class.getSimpleName();
     private static final int PERMISSION_REQ = 300;
@@ -49,7 +54,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     FloatingActionButton mFloatingButton;
     RecyclerView mRecyclerView;
     EmployeesRecyclerAdapter mAdapter;
-    Realm mRealm;
+    Cursor mCursor;
     ArrayList<Employee> mEmployeesList = new ArrayList<>();
 
 
@@ -59,9 +64,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Crittercism.initialize(getApplicationContext(), "93d5c608ee654190a35ea163cf5cb82b00555300");
         setContentView(R.layout.activity_main);
         checkPermissions();
-        mRealm = Realm.getDefaultInstance();
+//        loadData();
         setViews();
-        loadData();
+        getSupportLoaderManager().initLoader(0, null, this);
     }
 
     private void checkPermissions() {
@@ -70,8 +75,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Manifest.permission.WRITE_EXTERNAL_STORAGE,
                 Manifest.permission.INTERNET,
                 Manifest.permission.ACCESS_NETWORK_STATE,
-                Manifest.permission.GET_TASKS
         };
+
         List<String> listPermissionsNeeded = new ArrayList<>();
         for (String permission:permissions) {
             if (ContextCompat.checkSelfPermission(this,permission )!= PackageManager.PERMISSION_GRANTED){
@@ -113,7 +118,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if(mAdapter.getItemCount() > 0){
                     Toast.makeText(MainActivity.this, "About to share list", Toast.LENGTH_SHORT).show();
                     CsvShareTask shareTask = new CsvShareTask();
-                    shareTask.execute(mEmployeesList);
+                    shareTask.execute(EmployeeScannerUtils.getEmployeesFromCursor(mCursor));
 
                 }else{
                     Toast.makeText(MainActivity.this, "No items to share..", Toast.LENGTH_SHORT).show();
@@ -130,16 +135,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void loadData() {
 //        Employee[] employees = (Employee[]) mRealmResults.toArray();
-        EmployeesDataSource dataSource = new EmployeesDataSource(MainActivity.this);
-        dataSource.open();
-        mEmployeesList = dataSource.findAll();
-        dataSource.close();
+//        EmployeesDataSource dataSource = new EmployeesDataSource(MainActivity.this);
+//        dataSource.open();
+//        mEmployeesList = dataSource.findAll();
+//        dataSource.close();
+//
+//        if(mEmployeesList != null){
+//            mAdapter.updateList(mEmployeesList);
+//        }
 
-        if(mEmployeesList != null){
-            mAdapter.updateList(mEmployeesList);
+        mCursor = getContentResolver().query(EmployeesProvider.CONTENT_URI, EmployeesDbOpenHelper.allColumns, null, null, null);
+        if(mCursor != null){
+            Log.i(TAG, "loadData: cursor columns # = " + mCursor.getColumnCount());
         }
-
-
 
     }
 
@@ -155,10 +163,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mRecyclerView.addItemDecoration(new Divider(this, LinearLayoutManager.VERTICAL));
         LinearLayoutManager manager = new LinearLayoutManager(this);
         mRecyclerView.setLayoutManager(manager);
-        mAdapter = new EmployeesRecyclerAdapter(MainActivity.this, mEmployeesList);
-
+        mAdapter = new EmployeesRecyclerAdapter(MainActivity.this, null);
         mRecyclerView.setAdapter(mAdapter);
-        SimpleTouchCallback touchCallback = new SimpleTouchCallback(mAdapter);
+        SimpleTouchCallback touchCallback = new SimpleTouchCallback(this);
         ItemTouchHelper touchHelper = new ItemTouchHelper(touchCallback);
         touchHelper.attachToRecyclerView(mRecyclerView);
 
@@ -205,7 +212,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void onScanComplete(String scanStr) {
             Toast.makeText(MainActivity.this, "Added " + scanStr, Toast.LENGTH_SHORT).show();
-            loadData();
+            getSupportLoaderManager().restartLoader(0, null, MainActivity.this);
+//            loadData();
+//            mAdapter.updateList();
         }
 
         @Override
@@ -220,9 +229,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void onChange(Object element) {
             Log.i(TAG, "onChange: ");
-            mAdapter.updateList(mEmployeesList);
+//            mAdapter.updateList();
         }
     };
+
+
 
     class CsvShareTask extends AsyncTask<ArrayList<Employee>, Void, File> {
 
@@ -242,6 +253,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         @Override
         protected File doInBackground(ArrayList<Employee>... arrayLists) {
+
             ArrayList<Employee> list = arrayLists[0];
             File outputCsv = null;
             try {
@@ -281,5 +293,43 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
             startActivity(Intent.createChooser(intentShareFile, subject));
         }
+    }
+
+    @Override
+    public void onSwipe(int position) {
+
+
+        if (mCursor != null && mCursor.moveToPosition(position)) {
+            int columnIndx = mCursor.getColumnIndex(EmployeesDbOpenHelper.COLUMN_TAG_ID);
+            Log.i(TAG, "bindView: column index = " + columnIndx);
+            String tagId = mCursor.getString(columnIndx);
+            String where = EmployeesDbOpenHelper.COLUMN_TAG_ID + "=\"" + mCursor.getString(columnIndx) + "\"";
+            Log.i(TAG, "onSwipe: about to remove item " + where);
+            getContentResolver().delete(EmployeesProvider.CONTENT_URI, where, null);
+            Log.i(TAG, "item deleted... ");
+            getSupportLoaderManager().restartLoader(0, null, this);
+//            notifyItemRemoved(position);
+        }
+    }
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+        Log.i(TAG, "onCreateLoader was called");
+
+        return new CursorLoader(this, EmployeesProvider.CONTENT_URI, null, null, null, null);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
+        Log.i(TAG, "onLoadFinished was called");
+        mCursor = data;
+        mAdapter.updateCursor(data);
+
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+        Log.i(TAG, "onLoaderReset was called");
+        mAdapter.updateCursor(null);
     }
 }
