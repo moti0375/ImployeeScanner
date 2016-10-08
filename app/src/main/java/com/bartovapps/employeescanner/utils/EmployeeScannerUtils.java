@@ -38,9 +38,10 @@ public class EmployeeScannerUtils {
 
         File csvFile = null;
         Gson gson = new GsonBuilder().registerTypeAdapter(Employee.class, new EmployeeSerializer()).create();
-        JsonElement element = gson.toJsonTree(data, new TypeToken<List<Employee>>() {}.getType());
+        JsonElement element = gson.toJsonTree(data, new TypeToken<List<Employee>>() {
+        }.getType());
 
-        if (! element.isJsonArray()) {
+        if (!element.isJsonArray()) {
             Log.e(TAG, "Error occurred when trying to convert ArrayList<Employee> to jsonArray");
             return null;
         }
@@ -74,7 +75,7 @@ public class EmployeeScannerUtils {
         obj.put("tag_id", employee.getTag_id());
         obj.put("name", employee.getName());
         obj.put("address", employee.getAddress());
-        obj.put("arrived", employee.isArrived() ? "Yes" : "No" );
+        obj.put("arrived", employee.isArrived() ? "Yes" : "No");
         obj.put("image_uri", employee.getImageUri());
         //if you have more fields you continue
         return obj;
@@ -109,13 +110,13 @@ public class EmployeeScannerUtils {
 
     }
 
-    public static ArrayList<Employee> getEmployeesFromCursor(Cursor cursor){
+    public static ArrayList<Employee> getEmployeesFromCursor(Cursor cursor) {
         ArrayList<Employee> employees = new ArrayList<>();
 
         if (cursor.getCount() > 0) {
-
             cursor.moveToFirst();
-            while (cursor.moveToNext()) {
+
+            do {
                 Employee employee = new Employee();
                 employee.setId(cursor.getLong(cursor.getColumnIndex(EmployeesDbOpenHelper.COLUMN_ID)));
                 employee.setTag_id(cursor.getString(cursor.getColumnIndex(EmployeesDbOpenHelper.COLUMN_TAG_ID)));
@@ -123,10 +124,10 @@ public class EmployeeScannerUtils {
                 employee.setArrived(cursor.getInt(cursor.getColumnIndex(EmployeesDbOpenHelper.COLUMN_ARRIVED)) > 0);
                 employee.setImageUri(cursor.getString(cursor.getColumnIndex(EmployeesDbOpenHelper.COLUMN_IMAGE_URI)));
                 employees.add(employee);
-
                 Log.i(TAG, "employee added: " + employee.toString());
             }
-        }else{
+            while (cursor.moveToNext());
+        } else {
             return null;
         }
 
