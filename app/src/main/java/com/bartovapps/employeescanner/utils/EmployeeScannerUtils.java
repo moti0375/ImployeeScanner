@@ -2,6 +2,7 @@ package com.bartovapps.employeescanner.utils;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.Environment;
 import android.util.Log;
 
@@ -34,7 +35,8 @@ public class EmployeeScannerUtils {
 
     public static final String TAG = EmployeeScannerUtils.class.getSimpleName();
 
-    public static File realmDataListToCsv(Context context, ArrayList<Employee> data) throws JSONException {
+    public static File dataListToCsv(Context context, ArrayList<Employee> data) throws JSONException {
+
 
         File csvFile = null;
         Gson gson = new GsonBuilder().registerTypeAdapter(Employee.class, new EmployeeSerializer()).create();
@@ -72,6 +74,7 @@ public class EmployeeScannerUtils {
 
     public static JSONObject EmployeesJsonSerializer(Employee employee) throws JSONException {
         JSONObject obj = new JSONObject();
+        obj.put("No#", employee.getItemNo());
         obj.put("tag_id", employee.getTag_id());
         obj.put("name", employee.getName());
         obj.put("address", employee.getAddress());
@@ -101,6 +104,7 @@ public class EmployeeScannerUtils {
 
 
     public static String getFileNameWithDate(Context context) {
+
         long now = System.currentTimeMillis();
 
         SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
@@ -135,4 +139,23 @@ public class EmployeeScannerUtils {
 
     }
 
+
+    private static String getDevicePhoneNumber(Context context){
+        String phoneNumber = null;
+        String main_data[] = {"data1", "is_primary", "data3", "data2", "data1", "is_primary", "photo_uri", "mimetype"};
+        Object object = context.getContentResolver().query(Uri.withAppendedPath(android.provider.ContactsContract.Profile.CONTENT_URI, "data"),
+                main_data, "mimetype=?",
+                new String[]{"vnd.android.cursor.item/phone_v2"},
+                "is_primary DESC");
+        if (object != null) {
+            do {
+                if (!((Cursor) (object)).moveToNext())
+                    break;
+                phoneNumber = ((Cursor) (object)).getString(4);
+            } while (true);
+            ((Cursor) (object)).close();
+        }
+
+        return phoneNumber;
+    }
 }

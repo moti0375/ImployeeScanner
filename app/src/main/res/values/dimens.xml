@@ -3,6 +3,11 @@
     <dimen name="activity_horizontal_margin">16dp</dimen>
     <dimen name="activity_vertical_margin">16dp</dimen>
     <dimen name="floating_button_margin">16dp</dimen>
+    <dimen name="list_item_image_margin">16dp</dimen>
     <dimen name="floating_button_elevation">4dp</dimen>
-    <dimen name="list_item_image_size">48dp</dimen>
+    <dimen name="list_item_image_size">24dp</dimen>
+    <dimen name="toolbarElevation">4dp</dimen>
+    <dimen name="appBarTopMargin">0dp</dimen>
+    <dimen name="statusBarHeight">0dp</dimen>
+
 </resources>

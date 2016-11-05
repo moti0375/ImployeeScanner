@@ -5,6 +5,7 @@ package com.bartovapps.employeescanner.model;
  */
 public class Employee{
 
+    private int itemNo;
     private String tag_id;
     private transient long id; //transient will make gson to ignore it
 
@@ -21,12 +22,19 @@ public class Employee{
         this.arrived = arrived;
     }
 
-
-
     public Employee() {
     }
 
-    public Employee(String tag_id, String name, String address, String imageUri, boolean arrived) {
+    public int getItemNo() {
+        return itemNo;
+    }
+
+    public void setItemNo(int itemNo) {
+        this.itemNo = itemNo;
+    }
+
+    public Employee(int itemNo, String tag_id, String name, String address, String imageUri, boolean arrived) {
+        this.itemNo = itemNo;
         this.tag_id = tag_id;
         this.name = name;
         this.address = address;

@@ -1,4 +1,15 @@
 <resources>
     <string name="app_name">EmployeeScanner</string>
     <string name="scanning">Scanning...</string>
+    <string name="action_settings">Settings</string>
+    <string name="settings_scan_cat">Scan Options</string>
+    <string name="key_cont_scan">key_cont_scan</string>
+    <string name="settings_cont_scan">Continuance Scan</string>
+    <string name="scans">" Scans"</string>
+    <string name="file_sharing_title">"File Sharing"</string>
+    <string name="pd_list_sharing">Preparing list for sharing, please wait…</string>
+    <string name="no_items_to_share">No items to share…</string>
+    <string name="permission_required">This app must have this permission to work, goodbye</string>
+    <string name="scan_failed">"Failed, Try again…"</string>
+    <string name="share_error">Error occurred…</string>
 </resources>

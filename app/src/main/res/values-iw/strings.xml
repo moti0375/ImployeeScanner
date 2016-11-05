@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">סורק ברקוד</string>
+    <string name="scanning">סורק...</string>
+    <string name="action_settings">הגדרות</string>
+    <string name="settings_scan_cat">אפשרויות סורק</string>
+    <string name="settings_cont_scan">סריקה רציפה</string>
+    <string name="scans">" פריטים"</string>
+    <string name="file_sharing_title">"שיתוף קובץ"</string>
+    <string name="pd_list_sharing">משתף רשימה, אנא המתן…</string>
+    <string name="no_items_to_share">הרשימה ריקה, הפעולה בוטלה…</string>
+    <string name="permission_required">הרשאה זו נחוצה לאפליקציה זו, להתראות…</string>
+    <string name="scan_failed">"סורק נכשל, נסה שנית…"</string>
+    <string name="share_error">אירעה שגיאה…</string>
+</resources>

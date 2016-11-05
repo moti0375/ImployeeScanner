@@ -51,6 +51,7 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
 
     private boolean barcodeScanned = false;
     private boolean previewing = true;
+    private boolean mConinuanceScan;
     ScannerEventListener mEventListener;
 
     @Override
@@ -59,6 +60,7 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
         getActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         autoFocusHandler = new Handler();
 
+        mConinuanceScan = getArguments().getBoolean(getString(R.string.key_cont_scan));
 
         scanner = new ImageScanner();
         scanner.setConfig(0, Config.X_DENSITY, 3);
@@ -143,17 +145,19 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
 
         Uri uri = getActivity().getContentResolver().insert(EmployeesProvider.CONTENT_URI, values);
 
-        if(uri != null){
+        if (uri != null) {
             Log.i(TAG, "inserted via content provider");
-            if(mEventListener != null){
+            if (mEventListener != null) {
                 mEventListener.onScanComplete(employee.getTag_id());
             }
-        }else{
+        } else {
             Log.i(TAG, "Failed to insert to db via content provider ");
-            if(mEventListener != null){
+            if (mEventListener != null) {
                 mEventListener.onScanFailed("Failed to add to database");
             }
         }
+
+        tvScanText.setText(null);
     }
 
 
@@ -193,11 +197,6 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
             int result = scanner.scanImage(barcode);
 
             if (result != 0) {
-                btOk.setVisibility(View.VISIBLE);
-                btTryAgain.setVisibility(View.VISIBLE);
-                previewing = false;
-                mCamera.setPreviewCallback(null);
-                mCamera.stopPreview();
                 playBeep();
 
                 SymbolSet syms = scanner.getResults();
@@ -205,7 +204,19 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
                     tvScanText.setText(sym.getData());
                     barcodeScanned = true;
                 }
+
+                if (mConinuanceScan) {
+                    addEmployeeToDb();
+                } else {
+                    btOk.setVisibility(View.VISIBLE);
+                    btTryAgain.setVisibility(View.VISIBLE);
+                    previewing = false;
+                    mCamera.setPreviewCallback(null);
+                    mCamera.stopPreview();
+                }
             }
+
+
         }
     };
 
@@ -245,6 +256,7 @@ public class ScannerDialogFragment extends DialogFragment implements View.OnClic
 
     public interface ScannerEventListener {
         void onScanComplete(String scanStr);
+
         void onScanFailed(String message);
     }
 

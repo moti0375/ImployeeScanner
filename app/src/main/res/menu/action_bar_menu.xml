@@ -7,4 +7,9 @@
         app:showAsAction="always"
         android:icon="@drawable/ic_action_share"/>
 
+
+    <item android:id="@+id/ic_settings"
+        android:title="@string/action_settings"
+        app:showAsAction="never"/>
+
 </menu>

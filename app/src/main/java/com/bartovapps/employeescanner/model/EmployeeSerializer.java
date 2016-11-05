@@ -19,6 +19,7 @@ public class EmployeeSerializer implements JsonSerializer<Employee>{
     public JsonElement serialize(Employee src, Type typeOfSrc, JsonSerializationContext context) {
         Log.i(TAG, "serialize was called..");
         final JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("No#", src.getItemNo());
         jsonObject.addProperty("tag_id", src.getTag_id());
         jsonObject.addProperty("name", src.getName());
         jsonObject.addProperty("arrived", src.isArrived() ? "Yes" : "No");

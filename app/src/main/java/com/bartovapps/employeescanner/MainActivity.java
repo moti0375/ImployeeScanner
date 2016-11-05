@@ -1,13 +1,17 @@
 package com.bartovapps.employeescanner;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
@@ -15,14 +19,22 @@ import android.support.v4.app.LoaderManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
-import android.support.v7.app.AppCompatActivity;
+import android.support.v7.app.ActionBarActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.Toolbar;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.Log;
+import android.view.ActionMode;
+import android.view.GestureDetector;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bartovapps.employeescanner.adapters.Divider;
@@ -44,7 +56,7 @@ import java.util.List;
 
 import io.realm.RealmChangeListener;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, LoaderManager.LoaderCallbacks<Cursor>, SwipeListener {
+public class MainActivity extends ActionBarActivity implements View.OnClickListener, LoaderManager.LoaderCallbacks<Cursor>, SwipeListener {
     public static final String DIALOG_TAG = "DIALOG";
     private static final String TAG = MainActivity.class.getSimpleName();
     private static final int PERMISSION_REQ = 300;
@@ -53,9 +65,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     FloatingActionButton mFloatingButton;
     RecyclerView mRecyclerView;
+    TextView tvListHeader;
     EmployeesRecyclerAdapter mAdapter;
     Cursor mCursor;
-    ArrayList<Employee> mEmployeesList = new ArrayList<>();
+    ActionMode mActionMode;
+    Toolbar toolbar;
+    boolean continuanceScan = false;
 
 
     @Override
@@ -63,10 +78,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         Crittercism.initialize(getApplicationContext(), "93d5c608ee654190a35ea163cf5cb82b00555300");
         setContentView(R.layout.activity_main);
+        toolbar = (Toolbar) findViewById(R.id.app_bar);
+
+        try {
+            setSupportActionBar(toolbar);
+        } catch (Throwable t) {
+            // WTF SAMSUNG!
+        }
+        getSupportActionBar().setLogo(R.mipmap.ic_launcher);
+        getSupportActionBar().setDisplayUseLogoEnabled(true);
+
         checkPermissions();
+        readPreferences();
 //        loadData();
         setViews();
         getSupportLoaderManager().initLoader(0, null, this);
+    }
+
+    private void readPreferences() {
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        continuanceScan = sharedPreferences.getBoolean(getString(R.string.key_cont_scan), false);
     }
 
     private void checkPermissions() {
@@ -74,7 +105,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Manifest.permission.CAMERA,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE,
                 Manifest.permission.INTERNET,
-                Manifest.permission.ACCESS_NETWORK_STATE,
+                Manifest.permission.ACCESS_NETWORK_STATE
         };
 
         List<String> listPermissionsNeeded = new ArrayList<>();
@@ -116,13 +147,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         switch (itemId){
             case R.id.ic_action_share:
                 if(mAdapter.getItemCount() > 0){
-                    Toast.makeText(MainActivity.this, "About to share list", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, getString(R.string.pd_list_sharing), Toast.LENGTH_SHORT).show();
                     CsvShareTask shareTask = new CsvShareTask();
                     shareTask.execute(EmployeeScannerUtils.getEmployeesFromCursor(mCursor));
 
                 }else{
-                    Toast.makeText(MainActivity.this, "No items to share..", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, R.string.no_items_to_share, Toast.LENGTH_SHORT).show();
                 }
+                break;
+
+            case R.id.ic_settings:
+                Intent settingsIntent = new Intent(MainActivity.this, SettingsActivity.class);
+                startActivityForResult(settingsIntent, 100);
                 break;
         }
 
@@ -158,8 +194,27 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Log.i(TAG, "fab is null");
         }
         mFloatingButton.setOnClickListener(this);
+        tvListHeader = (TextView) findViewById(R.id.tvListHeader);
 
         mRecyclerView = (RecyclerView) findViewById(R.id.rvEmployeesRecyclerView);
+//        mRecyclerView.addOnItemTouchListener(new RecyclerTouchListener(MainActivity.this, mRecyclerView, actionModeCallback, new ClickListener() {
+//            @Override
+//            public void onClick(View v, int position) {
+//                //   Toast.makeText(GpsRecTripsList.this, "RecyclerView item " + position + " clicked..", Toast.LENGTH_SHORT).show();
+//                if (mActionMode != null) {
+//
+//                } else {
+//
+//                    Log.i(TAG, "List item " + position + " was clicked...");
+//
+//                }
+//            }
+//
+//            @Override
+//            public void onLongClick(View v, int position) {
+//                //Longclick is handled by the onLongPress of the RecyclerTouchListener down in this activity..
+//            }
+//        }));
         mRecyclerView.addItemDecoration(new Divider(this, LinearLayoutManager.VERTICAL));
         LinearLayoutManager manager = new LinearLayoutManager(this);
         mRecyclerView.setLayoutManager(manager);
@@ -185,17 +240,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         switch (requestCode) {
             case CAMERA_REQ_CODE:
                 if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(MainActivity.this, "This app must have Camera permission to work, goodbye", Toast.LENGTH_LONG).show();
+                    Toast.makeText(MainActivity.this, R.string.permission_required, Toast.LENGTH_LONG).show();
                     finish();
                 }
             case EXTERNAL_STORAGE_REQ_CODE:
                 if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(MainActivity.this, "This app must have external storage write permission, goodbye", Toast.LENGTH_LONG).show();
+                    Toast.makeText(MainActivity.this, R.string.permission_required, Toast.LENGTH_LONG).show();
                     finish();
                 }
             case PERMISSION_REQ:
                 if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(MainActivity.this, "This app must have this permission, goodbye", Toast.LENGTH_LONG).show();
+                    Toast.makeText(MainActivity.this, R.string.permission_required, Toast.LENGTH_LONG).show();
 //                    finish();
                 }
         }
@@ -203,6 +258,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void showDialog() {
         ScannerDialogFragment dialogFragment = new ScannerDialogFragment();
+        Bundle b = new Bundle();
+        b.putBoolean(getString(R.string.key_cont_scan), continuanceScan);
+        dialogFragment.setArguments(b);
         dialogFragment.setScanEventListener(mEventListener);
         dialogFragment.show(getSupportFragmentManager(), DIALOG_TAG);
     }
@@ -211,7 +269,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     ScannerDialogFragment.ScannerEventListener mEventListener = new ScannerDialogFragment.ScannerEventListener() {
         @Override
         public void onScanComplete(String scanStr) {
-            Toast.makeText(MainActivity.this, "Added " + scanStr, Toast.LENGTH_SHORT).show();
+//            Toast.makeText(MainActivity.this, "Added " + scanStr, Toast.LENGTH_SHORT).show();
             getSupportLoaderManager().restartLoader(0, null, MainActivity.this);
 //            loadData();
 //            mAdapter.updateList();
@@ -219,7 +277,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         @Override
         public void onScanFailed(String message) {
-            Toast.makeText(MainActivity.this, "Failed, " + message, Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, getString(R.string.scan_failed), Toast.LENGTH_SHORT).show();
         }
     };
 
@@ -246,7 +304,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             progressDialog.setCancelable(false);
             progressDialog.setIcon(ContextCompat.getDrawable(MainActivity.this, R.mipmap.ic_launcher));
             progressDialog.setTitle(getString(R.string.app_name));
-            progressDialog.setMessage("Preparing list for sharing, please wait...");
+            progressDialog.setMessage(getString(R.string.pd_list_sharing));
             progressDialog.show();
 
         }
@@ -257,7 +315,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             ArrayList<Employee> list = arrayLists[0];
             File outputCsv = null;
             try {
-                outputCsv = EmployeeScannerUtils.realmDataListToCsv(MainActivity.this, list);
+                for (int i = 0; i < list.size(); i++){
+                    list.get(i).setItemNo(i+1);
+                }
+                outputCsv = EmployeeScannerUtils.dataListToCsv(MainActivity.this, list);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -273,7 +334,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     progressDialog.dismiss();
                 }
             }else{
-                Toast.makeText(MainActivity.this, "Error occurred..", Toast.LENGTH_LONG).show();
+                Toast.makeText(MainActivity.this, R.string.share_error, Toast.LENGTH_LONG).show();
             }
         }
     }
@@ -285,7 +346,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             intentShareFile.setType("application/vnd.ms-excel");
             intentShareFile.putExtra(Intent.EXTRA_STREAM, Uri.parse("file://"+outputCsv));
 
-            String subject = getString(R.string.app_name) + " - File Sharing: ";
+            String subject = getString(R.string.app_name) + " - " + getString(R.string.file_sharing_title) + ": ";
 
             intentShareFile.putExtra(Intent.EXTRA_SUBJECT,
                     subject + outputCsv.getName());
@@ -324,7 +385,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Log.i(TAG, "onLoadFinished was called");
         mCursor = data;
         mAdapter.updateCursor(data);
-
+        tvListHeader.setText(mCursor.getCount() + getString(R.string.scans));
     }
 
     @Override
@@ -332,4 +393,118 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Log.i(TAG, "onLoaderReset was called");
         mAdapter.updateCursor(null);
     }
+
+
+    class RecyclerTouchListener implements RecyclerView.OnItemTouchListener {
+
+        private final String LOG_TAG = RecyclerTouchListener.class.getSimpleName();
+        GestureDetector gestureDetector;
+        ClickListener clickListener;
+
+        public RecyclerTouchListener(final Activity context, final RecyclerView recyclerView, final android.view.ActionMode.Callback actionModeCallback, final ClickListener clickListener) {
+            Log.i(LOG_TAG, "constructor was invoked");
+            this.clickListener = clickListener;
+
+            gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
+                @Override
+                public boolean onSingleTapUp(MotionEvent e) {
+//                    Log.i(LOG_TAG, "onSingleTapUp was invoked..: " + e);
+//                    return super.onSingleTapUp(e);
+                    return true;
+                }
+
+
+                @Override
+                public void onLongPress(MotionEvent e) {
+                    Log.i(LOG_TAG, "onLongPress was invoked..: " + e);
+                    View childView = recyclerView.findChildViewUnder(e.getX(), e.getY());
+                    if (mActionMode != null) {
+                        return;
+                    } else {
+//                        mActionMode = MainActivity.this.startActionMode(actionModeCallback);
+//                        Log.i(LOG_TAG, "ActionMode = " + mActionMode);
+////                        int idx = recyclerView.getChildPosition(childView);   //this method was deprecated and caused app to crash! replaced with the one below..
+//                        int idx = recyclerView.getChildLayoutPosition(childView);
+//                        Log.i(LOG_TAG, "indx = " + idx);
+                    }
+
+                    super.onLongPress(e);
+                }
+            });
+        }
+
+
+        @Override
+        public boolean onInterceptTouchEvent(RecyclerView rv, MotionEvent e) {
+//            Log.i(LOG_TAG, "onInterceptTouchEvent was called: " + gestureDetector.onTouchEvent(e));
+            View child = rv.findChildViewUnder(e.getX(), e.getY());
+            if (child != null && clickListener != null && gestureDetector.onTouchEvent(e) == true) {
+                // clickListener.onClick(child, rv.getChildPosition(child));
+                clickListener.onClick(child, rv.getChildAdapterPosition(child));
+            }
+            return false;
+        }
+
+        @Override
+        public void onTouchEvent(RecyclerView rv, MotionEvent e) {
+            Log.i(LOG_TAG, "onTouchEvent was called: " + e);
+
+        }
+
+        @Override
+        public void onRequestDisallowInterceptTouchEvent(boolean disallowIntercept) {
+
+        }
+    }
+
+    ActionMode.Callback actionModeCallback = new ActionMode.Callback() {
+        @Override
+        public boolean onCreateActionMode(ActionMode actionMode, Menu menu) {
+            Log.i(TAG, "onCreateActionMode");
+            MenuInflater inflater = actionMode.getMenuInflater();
+            inflater.inflate(R.menu.action_mode_menu, menu);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+                getWindow().setStatusBarColor(ContextCompat.getColor(MainActivity.this, R.color.colorPrimaryDark));
+
+                ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) toolbar.getLayoutParams();
+                params.setMargins(0, 0, 0, 0);
+                toolbar.setLayoutParams(params);
+            }
+
+            return true;
+        }
+
+        @Override
+        public boolean onPrepareActionMode(ActionMode actionMode, Menu menu) {
+            return false;
+        }
+
+        @Override
+        public boolean onActionItemClicked(ActionMode actionMode, MenuItem menuItem) {
+            return false;
+        }
+
+        @Override
+        public void onDestroyActionMode(ActionMode actionMode) {
+            Log.i(TAG, "onDestroyActionMode");
+            mActionMode = null;
+            //tripListView.removeAllViews();
+            //   tripListView.setAdapter(checkedListAdapter);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                getWindow().addFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
+                ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) toolbar.getLayoutParams();
+                params.setMargins(0, getResources().getDimensionPixelOffset(R.dimen.appBarTopMargin), 0, 0);
+                toolbar.setLayoutParams(params);
+            }
+
+        }
+    };
+
+    public interface ClickListener {
+         void onClick(View v, int position);
+
+        void onLongClick(View v, int position);
+    }
+
 }

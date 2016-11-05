@@ -7,10 +7,28 @@
     tools:context=".MainActivity">
 
 
+    <include
+        android:id="@+id/app_bar"
+        layout="@layout/app_bar" />
+
+
+    <TextView
+        android:id="@+id/tvListHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/app_bar"
+        android:background="@color/colorPrimary"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:padding="5dp"
+        android:textColor="?android:attr/textColorSecondary"
+        android:elevation="4dp"
+        android:gravity="center"/>
+
     <android.support.v7.widget.RecyclerView
         android:id="@+id/rvEmployeesRecyclerView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:layout_below="@+id/tvListHeader">
 
     </android.support.v7.widget.RecyclerView>
 
@@ -19,10 +37,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="@dimen/floating_button_margin"
-        android:layout_alignParentBottom="true"
         android:layout_alignParentRight="true"
-        android:src="@drawable/ic_action_barcode_1"
-        android:elevation="4dp">
+        android:layout_alignParentBottom="true"
+        android:elevation="4dp"
+        android:src="@drawable/ic_action_barcode_1">
 
     </android.support.design.widget.FloatingActionButton>
 </RelativeLayout>

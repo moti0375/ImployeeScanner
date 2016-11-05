@@ -5,6 +5,7 @@ import android.database.Cursor;
 import android.database.DataSetObserver;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,6 +30,8 @@ public class EmployeesRecyclerAdapter extends RecyclerView.Adapter<EmployeesRecy
     Cursor mCursor;
     boolean mDataValid;
     private int mRowIdColumn;
+    private SparseBooleanArray selectedItems;
+
 
     private DataSetObserver mDataSetObserver;
 
@@ -47,6 +50,7 @@ public class EmployeesRecyclerAdapter extends RecyclerView.Adapter<EmployeesRecy
         mDataValid = cursor != null;
 
         mDataSetObserver = new NotifyingDataSetObserver();
+        selectedItems = new SparseBooleanArray();
 
         if (mCursor != null) {
             mCursor.registerDataSetObserver(mDataSetObserver);
@@ -80,8 +84,6 @@ public class EmployeesRecyclerAdapter extends RecyclerView.Adapter<EmployeesRecy
                 }
 
             }
-
-
 //            @Override
 //            public Cursor swapCursor(Cursor newCursor) {
 //                Log.i(TAG, "swapCursor was called");
@@ -174,7 +176,7 @@ public class EmployeesRecyclerAdapter extends RecyclerView.Adapter<EmployeesRecy
     public int getItemCount() {
 
         if (mDataValid) {
-            Log.i(TAG, "getItemCount: " + mCursorAdapter.getCount());
+//            Log.i(TAG, "getItemCount: " + mCursorAdapter.getCount());
             return mCursorAdapter.getCount();
         }
         return 0;
@@ -238,6 +240,21 @@ public class EmployeesRecyclerAdapter extends RecyclerView.Adapter<EmployeesRecy
             notifyDataSetChanged();
             //There is no notifyDataSetInvalidated() method in RecyclerView.Adapter
         }
+    }
+
+    public void toggleSelection(int position) {
+        Log.i(TAG, "toggleSelection was called");
+        if (selectedItems.get(position, false)) {
+            selectedItems.delete(position);
+        } else {
+            selectedItems.put(position, true);
+        }
+        notifyItemChanged(position);
+    }
+
+    public void clearSelection() {
+        selectedItems.clear();
+        notifyDataSetChanged();
     }
 }
 
