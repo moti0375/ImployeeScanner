@@ -5,7 +5,7 @@
     android:layout_height="?android:attr/actionBarSize"
     android:background="@color/colorPrimary"
     app:theme="@style/MyCustomToolBarTheme"
-    app:popupTheme="@style/ThemeOverlay.AppCompat.Dark"
+    app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
     android:elevation="@dimen/toolbarElevation"
     android:layout_marginTop="@dimen/appBarTopMargin"
     android:textDirection="ltr"

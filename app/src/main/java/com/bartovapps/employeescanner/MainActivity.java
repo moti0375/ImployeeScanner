@@ -77,7 +77,7 @@ public class MainActivity extends ActionBarActivity implements View.OnClickListe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Crittercism.initialize(getApplicationContext(), "93d5c608ee654190a35ea163cf5cb82b00555300");
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_main_coordinator);
         toolbar = (Toolbar) findViewById(R.id.app_bar);
 
         try {

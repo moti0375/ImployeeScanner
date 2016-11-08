@@ -6,11 +6,11 @@ android {
     buildToolsVersion "24.0.0"
 
     defaultConfig {
-        applicationId "com.bartovapps.imployeescanner"
+        applicationId "com.bartovapps.employeescanner"
         minSdkVersion 15
         targetSdkVersion 24
-        versionCode 3
-        versionName "1.2"
+        versionCode 4
+        versionName "2.0"
     }
     buildTypes {
         release {
