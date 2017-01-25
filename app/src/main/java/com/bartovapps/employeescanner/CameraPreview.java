@@ -18,7 +18,7 @@ import java.util.List;
 
 /** A basic Camera preview class */
 public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
-    private static final String TAG = CameraPreview.class.getSimpleName();
+    private static final String TAG = "CameraPreviewLog";
     private SurfaceHolder mHolder;
     private Camera mCamera;
     private PreviewCallback previewCallback;
